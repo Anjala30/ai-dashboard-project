@@ -234,9 +234,8 @@ def dashboard():
 
     col1, col2 = st.columns(2)
 
-    col1.write("Median:", filtered_df["marks"].median())
-    col2.write("Std Dev:", filtered_df["marks"].std())
-
+    col1.write(f"Median: {filtered_df['marks'].median()}")
+    col2.write(f"Std Dev: {filtered_df['marks'].std()}")
     st.markdown("---")
 
     # ================= FOOTER =================
