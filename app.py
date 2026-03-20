@@ -3,35 +3,60 @@ import pandas as pd
 import requests
 import matplotlib.pyplot as plt
 from openai import OpenAI
+
+# ================== CONFIG ==================
+st.set_page_config(page_title="AI Dashboard", layout="wide")
+
+# ================== OPENAI ==================
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# ================== PAGE CONFIG ==================
-st.set_page_config(page_title="AI Dashboard", layout="wide")
+# ================== UI STYLE ==================
+st.markdown("""
+<style>
+.stApp {
+    background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+    color: white;
+}
+div.stButton > button {
+    background-color: #ff4b4b;
+    color: white;
+    border-radius: 10px;
+}
+.chat-user {
+    background: #2563eb;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+}
+.chat-ai {
+    background: #16a34a;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ================== LOGIN STATE ==================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
-# ================== USER DATABASE ==================
+# ================== USERS ==================
 users = {
     "admin": "1234",
     "anjala": "pass123",
     "demo": "demo123"
 }
 
-# ================== WEATHER FUNCTION ==================
+# ================== WEATHER ==================
 def get_weather(city):
     api_key = "67c4117ca275c8948ddbc80f84554e42"
     url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
 
     try:
-        response = requests.get(url)
-        data = response.json()
-
+        data = requests.get(url).json()
         if data["cod"] == 200:
-            temp = data["main"]["temp"]
-            weather = data["weather"][0]["description"]
-            return f"{weather}, {temp}°C"
+            return f"{data['weather'][0]['description']}, {data['main']['temp']}°C"
         else:
             return "Weather not found"
     except:
@@ -49,35 +74,27 @@ def ai_agent(student_name, df):
 
     weather = get_weather(city)
 
-    # 🔥 Improved Insight
     if marks >= 85:
-        insight = "Excellent performance 🚀 Keep it up!"
+        insight = "Excellent performance 🚀"
     elif marks >= 70:
-        insight = "Good performance 👍 You can improve more."
+        insight = "Good performance 👍"
     elif marks >= 50:
-        insight = "Average performance ⚡ Needs consistency."
+        insight = "Average performance ⚡"
     else:
-        insight = "Needs improvement 📉 Focus more."
+        insight = "Needs improvement 📉"
 
     return f"""
-📊 Student: {student_name}  
-🎯 Marks: {marks}  
-🌍 City: {city}  
-☁️ Weather: {weather}  
+📌 Student: {student_name}
+📊 Marks: {marks}
+🌍 City: {city}
+🌤 Weather: {weather}
 
 💡 Insight: {insight}
 """
 
-# ================== LOGIN FUNCTION ==================
+# ================== LOGIN ==================
 def login():
     st.title("🔐 Login Page")
-
-    st.markdown("### 🔑 Demo Credentials")
-    st.code("""
-admin / 1234
-anjala / pass123
-demo / demo123
-""")
 
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
@@ -86,7 +103,6 @@ demo / demo123
         if username in users and users[username] == password:
             st.session_state.logged_in = True
             st.session_state.username = username
-            st.success("Login successful ✅")
             st.rerun()
         else:
             st.error("Invalid credentials ❌")
@@ -106,16 +122,11 @@ def dashboard():
     # LOAD DATA
     df = pd.read_csv("students.csv")
     df["marks"] = pd.to_numeric(df["marks"], errors="coerce")
-    df["age"] = pd.to_numeric(df["age"], errors="coerce")
 
     # FILTERS
     st.sidebar.title("🔎 Filters")
 
-    city = st.sidebar.selectbox(
-        "Select City",
-        ["All"] + list(df["city"].unique())
-    )
-
+    city = st.sidebar.selectbox("Select City", ["All"] + list(df["city"].unique()))
     min_marks = st.sidebar.slider("Minimum Marks", 0, 100, 50)
 
     filtered_df = df.copy()
@@ -131,34 +142,28 @@ def dashboard():
 
     # KPI
     st.markdown("## 📊 Key Insights")
+
     col1, col2, col3, col4 = st.columns(4)
 
     col1.metric("Total Students", len(filtered_df))
-    col2.metric("Average Marks", round(filtered_df["marks"].mean(), 2) if not filtered_df.empty else 0)
-    col3.metric("Highest Marks", filtered_df["marks"].max() if not filtered_df.empty else 0)
-    col4.metric("Lowest Marks", filtered_df["marks"].min() if not filtered_df.empty else 0)
+    col2.metric("Average Marks", round(filtered_df["marks"].mean(), 2))
+    col3.metric("Highest Marks", filtered_df["marks"].max())
+    col4.metric("Lowest Marks", filtered_df["marks"].min())
 
-    # ================== ASK AI ==================
-   # ================== GPT AI CHAT ==================
-# ================== GPT AI CHAT ==================
-st.markdown("## 🤖 AI Chat (Powered by GPT)")
+    # ================= AI CHAT =================
+    st.markdown("## 🤖 AI Chat (Powered by GPT)")
 
-# Initialize chat history
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
 
-# Input
-user_input = st.text_input("Ask anything about your data")
+    user_input = st.text_input("Ask anything about your data")
 
-# Button
-if st.button("Ask AI"):
-    if user_input:
+    if st.button("Ask AI"):
+        if user_input:
 
-        # Convert dataframe to text
-        data_context = df.to_string()
+            data_context = filtered_df.to_string()
 
-        # Prompt
-        prompt = f"""
+            prompt = f"""
 You are a smart data analyst.
 
 Dataset:
@@ -170,26 +175,24 @@ Question:
 Give clear and short answer.
 """
 
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}]
-            )
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": prompt}]
+                )
 
-            answer = response.choices[0].message.content
+                answer = response.choices[0].message.content
 
-            # Save chat
-            st.session_state.chat_history.append((user_input, answer))
+                st.session_state.chat_history.append((user_input, answer))
 
-        except Exception as e:
-            st.error(f"Error: {e}")
+            except Exception as e:
+                st.error(f"Error: {e}")
 
-# Display chat history
-for q, a in st.session_state.chat_history[::-1]:
-    st.markdown(f"**🧑 You:** {q}")
-    st.markdown(f"**🤖 AI:** {a}")
+    for q, a in st.session_state.chat_history[::-1]:
+        st.markdown(f'<div class="chat-user">🧑 {q}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="chat-ai">🤖 {a}</div>', unsafe_allow_html=True)
 
-    # ================== SMART AI ==================
+    # ================= SMART AI =================
     st.markdown("## 🤖 Smart AI Assistant")
 
     student_query = st.text_input("Ask about a student (e.g. Priya)")
@@ -202,74 +205,36 @@ for q, a in st.session_state.chat_history[::-1]:
     st.markdown("## 📋 Student Data")
     st.dataframe(filtered_df, use_container_width=True)
 
-    # ================== VISUALS ==================
-    st.markdown("## 📈 Visual Dashboard")
+    # VISUALS
+    st.markdown("## 📊 Visual Dashboard")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("🎯 Marks Distribution")
         st.bar_chart(filtered_df["marks"])
 
     with col2:
-        st.subheader("🏙️ Students by City")
         st.bar_chart(filtered_df["city"].value_counts())
 
-    # 🔥 PIE CHART
-    st.subheader("🥧 City Distribution (Pie Chart)")
+    # PIE
+    st.subheader("🥧 City Distribution")
     city_counts = filtered_df["city"].value_counts()
 
     fig, ax = plt.subplots()
     ax.pie(city_counts, labels=city_counts.index, autopct="%1.1f%%")
     st.pyplot(fig)
 
-    col3, col4 = st.columns(2)
-
-    with col3:
-        st.subheader("📊 Average Marks per City")
-        st.bar_chart(filtered_df.groupby("city")["marks"].mean())
-
-    with col4:
-        st.subheader("🔥 Top 5 Performers")
-        st.dataframe(filtered_df.sort_values(by="marks", ascending=False).head(5))
-
-    # QUICK SEARCH
-    st.markdown("## 🔍 Quick Search")
-
-    name_search = st.text_input("Search student by name")
-
-    if name_search:
-        result = filtered_df[
-            filtered_df["name"].str.contains(name_search, case=False)
-        ]
-        st.dataframe(result, use_container_width=True)
-
-    # EXTRA
-    st.markdown("## 🧠 Extra Insights")
-
-    col11, col12 = st.columns(2)
-
-    col11.subheader("Median Marks")
-    col11.write(filtered_df["marks"].median())
-
-    col12.subheader("Standard Deviation")
-    col12.write(filtered_df["marks"].std())
-
     # DOWNLOAD
-    st.markdown("## ⬇️ Download Data")
+    st.markdown("## ⬇ Download Data")
 
     csv = filtered_df.to_csv(index=False).encode("utf-8")
 
     st.download_button(
-        label="Download CSV",
-        data=csv,
-        file_name="students.csv",
-        mime="text/csv"
+        "Download CSV",
+        csv,
+        "students.csv",
+        "text/csv"
     )
-
-    # FOOTER
-    st.markdown("---")
-    st.markdown("Made with ❤️ by Anjala | AI Dashboard Project")
 
 # ================== MAIN ==================
 if not st.session_state.logged_in:
