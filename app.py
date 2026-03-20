@@ -14,25 +14,20 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 st.markdown("""
 <style>
 .stApp {
-    background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+    background: linear-gradient(to right,#0f2027,#203a43,#2c5364);
     color: white;
-}
-div.stButton > button {
-    background-color: #ff4b4b;
-    color: white;
-    border-radius: 10px;
 }
 .chat-user {
-    background: #2563eb;
-    padding: 10px;
-    border-radius: 10px;
-    margin-bottom: 5px;
+    background:#2563eb;
+    padding:10px;
+    border-radius:10px;
+    margin-bottom:5px;
 }
 .chat-ai {
-    background: #16a34a;
-    padding: 10px;
-    border-radius: 10px;
-    margin-bottom: 10px;
+    background:#16a34a;
+    padding:10px;
+    border-radius:10px;
+    margin-bottom:10px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -50,17 +45,12 @@ users = {
 
 # ================== WEATHER ==================
 def get_weather(city):
-    api_key = "67c4117ca275c8948ddbc80f84554e42"
-    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
-
     try:
+        url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid=67c4117ca275c8948ddbc80f84554e42&units=metric"
         data = requests.get(url).json()
-        if data["cod"] == 200:
-            return f"{data['weather'][0]['description']}, {data['main']['temp']}°C"
-        else:
-            return "Weather not found"
+        return f"{data['weather'][0]['description']}, {data['main']['temp']}°C"
     except:
-        return "Error fetching weather"
+        return "N/A"
 
 # ================== AI AGENT ==================
 def ai_agent(student_name, df):
@@ -96,6 +86,8 @@ def ai_agent(student_name, df):
 def login():
     st.title("🔐 Login Page")
 
+    st.info("admin / 1234\nanjala / pass123\ndemo / demo123")
+
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
@@ -115,6 +107,7 @@ def logout():
 # ================== DASHBOARD ==================
 def dashboard():
 
+    # SIDEBAR
     st.sidebar.success("AI Dashboard Live 🚀")
     st.sidebar.write(f"👤 {st.session_state.username}")
     st.sidebar.button("Logout", on_click=logout)
@@ -123,7 +116,7 @@ def dashboard():
     df = pd.read_csv("students.csv")
     df["marks"] = pd.to_numeric(df["marks"], errors="coerce")
 
-    # FILTERS
+    # ================= FILTERS =================
     st.sidebar.title("🔎 Filters")
 
     city = st.sidebar.selectbox("Select City", ["All"] + list(df["city"].unique()))
@@ -136,11 +129,11 @@ def dashboard():
 
     filtered_df = filtered_df[filtered_df["marks"] >= min_marks]
 
-    # TITLE
+    # ================= TITLE =================
     st.title("🤖 AI Data Query Dashboard")
     st.caption("AI-powered analytics with real-time insights 🚀")
 
-    # KPI
+    # ================= KPI =================
     st.markdown("## 📊 Key Insights")
 
     col1, col2, col3, col4 = st.columns(4)
@@ -183,10 +176,10 @@ Give clear and short answer.
 
                 answer = response.choices[0].message.content
 
-                st.session_state.chat_history.append((user_input, answer))
+            except Exception:
+                answer = "⚠️ AI quota exceeded (API limit). Dashboard still works."
 
-            except Exception as e:
-                st.error(f"Error: {e}")
+            st.session_state.chat_history.append((user_input, answer))
 
     for q, a in st.session_state.chat_history[::-1]:
         st.markdown(f'<div class="chat-user">🧑 {q}</div>', unsafe_allow_html=True)
@@ -201,40 +194,73 @@ Give clear and short answer.
         response = ai_agent(student_query, filtered_df)
         st.success(response)
 
-    # TABLE
+    # ================= TABLE =================
     st.markdown("## 📋 Student Data")
     st.dataframe(filtered_df, use_container_width=True)
 
-    # VISUALS
+    # ================= VISUALS =================
     st.markdown("## 📊 Visual Dashboard")
 
     col1, col2 = st.columns(2)
 
     with col1:
+        st.subheader("Marks Distribution")
         st.bar_chart(filtered_df["marks"])
 
     with col2:
+        st.subheader("Students by City")
         st.bar_chart(filtered_df["city"].value_counts())
 
-    # PIE
-    st.subheader("🥧 City Distribution")
+    # PIE CHART
+    st.subheader("City Distribution (Pie Chart)")
+
     city_counts = filtered_df["city"].value_counts()
 
     fig, ax = plt.subplots()
     ax.pie(city_counts, labels=city_counts.index, autopct="%1.1f%%")
     st.pyplot(fig)
 
-    # DOWNLOAD
+    # ================= TOP STUDENTS =================
+    st.markdown("## 🏆 Top 5 Performers")
+    st.dataframe(filtered_df.sort_values(by="marks", ascending=False).head(5))
+
+    # ================= SEARCH =================
+    st.markdown("## 🔍 Quick Search")
+
+    name_search = st.text_input("Search student by name")
+
+    if name_search:
+        result = filtered_df[
+            filtered_df["name"].str.contains(name_search, case=False)
+        ]
+        st.dataframe(result)
+
+    # ================= EXTRA =================
+    st.markdown("## 🧠 Extra Insights")
+
+    col11, col12 = st.columns(2)
+
+    col11.subheader("Median Marks")
+    col11.write(filtered_df["marks"].median())
+
+    col12.subheader("Standard Deviation")
+    col12.write(filtered_df["marks"].std())
+
+    # ================= DOWNLOAD =================
     st.markdown("## ⬇ Download Data")
 
     csv = filtered_df.to_csv(index=False).encode("utf-8")
 
     st.download_button(
-        "Download CSV",
-        csv,
-        "students.csv",
-        "text/csv"
+        label="Download CSV",
+        data=csv,
+        file_name="students.csv",
+        mime="text/csv"
     )
+
+    # ================= FOOTER =================
+    st.markdown("---")
+    st.markdown("Made with ❤️ by Anjala | AI Dashboard Project")
 
 # ================== MAIN ==================
 if not st.session_state.logged_in:
