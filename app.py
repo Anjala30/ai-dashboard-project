@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
+import matplotlib.pyplot as plt
 
 # ================== PAGE CONFIG ==================
 st.set_page_config(page_title="AI Dashboard", layout="wide")
@@ -46,25 +47,35 @@ def ai_agent(student_name, df):
 
     weather = get_weather(city)
 
-    return f"""
-    📊 Student: {student_name}  
-    🎯 Marks: {marks}  
-    🌍 City: {city}  
-    ☁️ Weather: {weather}  
+    # 🔥 Improved Insight
+    if marks >= 85:
+        insight = "Excellent performance 🚀 Keep it up!"
+    elif marks >= 70:
+        insight = "Good performance 👍 You can improve more."
+    elif marks >= 50:
+        insight = "Average performance ⚡ Needs consistency."
+    else:
+        insight = "Needs improvement 📉 Focus more."
 
-    💡 Insight: Good time to study!
-    """
+    return f"""
+📊 Student: {student_name}  
+🎯 Marks: {marks}  
+🌍 City: {city}  
+☁️ Weather: {weather}  
+
+💡 Insight: {insight}
+"""
 
 # ================== LOGIN FUNCTION ==================
 def login():
     st.title("🔐 Login Page")
-    st.markdown("### 🔑 Demo Credentials")
 
+    st.markdown("### 🔑 Demo Credentials")
     st.code("""
-    admin / 1234
-    anjala / pass123
-    demo / demo123
-    """)
+admin / 1234
+anjala / pass123
+demo / demo123
+""")
 
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
@@ -86,6 +97,7 @@ def logout():
 # ================== DASHBOARD ==================
 def dashboard():
 
+    st.sidebar.success("AI Dashboard Live 🚀")
     st.sidebar.write(f"👤 {st.session_state.username}")
     st.sidebar.button("Logout", on_click=logout)
 
@@ -113,17 +125,18 @@ def dashboard():
 
     # TITLE
     st.title("🤖 AI Data Query Dashboard")
+    st.caption("AI-powered analytics with real-time insights 🚀")
 
     # KPI
     st.markdown("## 📊 Key Insights")
     col1, col2, col3, col4 = st.columns(4)
 
     col1.metric("Total Students", len(filtered_df))
-    col2.metric("Average Marks", round(filtered_df["marks"].mean(), 2))
-    col3.metric("Highest Marks", filtered_df["marks"].max())
-    col4.metric("Lowest Marks", filtered_df["marks"].min())
+    col2.metric("Average Marks", round(filtered_df["marks"].mean(), 2) if not filtered_df.empty else 0)
+    col3.metric("Highest Marks", filtered_df["marks"].max() if not filtered_df.empty else 0)
+    col4.metric("Lowest Marks", filtered_df["marks"].min() if not filtered_df.empty else 0)
 
-    # ================== EXISTING AI QUERY ==================
+    # ================== ASK AI ==================
     st.markdown("## 🤖 Ask AI")
 
     query = st.text_input("Ask your question (e.g. students from Pune)")
@@ -154,7 +167,7 @@ def dashboard():
             st.success("AI Response")
             st.dataframe(df_result, use_container_width=True)
 
-    # ================== NEW AI AGENT (TRACK 2) ==================
+    # ================== SMART AI ==================
     st.markdown("## 🤖 Smart AI Assistant")
 
     student_query = st.text_input("Ask about a student (e.g. Priya)")
@@ -167,7 +180,7 @@ def dashboard():
     st.markdown("## 📋 Student Data")
     st.dataframe(filtered_df, use_container_width=True)
 
-    # VISUALS
+    # ================== VISUALS ==================
     st.markdown("## 📈 Visual Dashboard")
 
     col1, col2 = st.columns(2)
@@ -179,6 +192,14 @@ def dashboard():
     with col2:
         st.subheader("🏙️ Students by City")
         st.bar_chart(filtered_df["city"].value_counts())
+
+    # 🔥 PIE CHART
+    st.subheader("🥧 City Distribution (Pie Chart)")
+    city_counts = filtered_df["city"].value_counts()
+
+    fig, ax = plt.subplots()
+    ax.pie(city_counts, labels=city_counts.index, autopct="%1.1f%%")
+    st.pyplot(fig)
 
     col3, col4 = st.columns(2)
 
@@ -223,6 +244,10 @@ def dashboard():
         file_name="students.csv",
         mime="text/csv"
     )
+
+    # FOOTER
+    st.markdown("---")
+    st.markdown("Made with ❤️ by Anjala | AI Dashboard Project")
 
 # ================== MAIN ==================
 if not st.session_state.logged_in:
