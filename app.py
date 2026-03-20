@@ -180,7 +180,7 @@ if st.button("Ask AI"):
     for q, a in st.session_state.chat_history[::-1]:
     st.markdown(f"**🧑 You:** {q}")
     st.markdown(f"**🤖 AI:** {a}")
-
+    
     # ================== SMART AI ==================
     st.markdown("## 🤖 Smart AI Assistant")
 
