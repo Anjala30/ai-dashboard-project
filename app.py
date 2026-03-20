@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import requests
 
 # ================== PAGE CONFIG ==================
 st.set_page_config(page_title="AI Dashboard", layout="wide")
@@ -14,6 +15,45 @@ users = {
     "anjala": "pass123",
     "demo": "demo123"
 }
+
+# ================== WEATHER FUNCTION ==================
+def get_weather(city):
+    api_key = "67c4117ca275c8948ddbc80f84554e42"
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+
+    try:
+        response = requests.get(url)
+        data = response.json()
+
+        if data["cod"] == 200:
+            temp = data["main"]["temp"]
+            weather = data["weather"][0]["description"]
+            return f"{weather}, {temp}°C"
+        else:
+            return "Weather not found"
+    except:
+        return "Error fetching weather"
+
+# ================== AI AGENT ==================
+def ai_agent(student_name, df):
+    student = df[df["name"].str.lower() == student_name.lower()]
+
+    if student.empty:
+        return "Student not found ❌"
+
+    city = student.iloc[0]["city"]
+    marks = student.iloc[0]["marks"]
+
+    weather = get_weather(city)
+
+    return f"""
+    📊 Student: {student_name}  
+    🎯 Marks: {marks}  
+    🌍 City: {city}  
+    ☁️ Weather: {weather}  
+
+    💡 Insight: Good time to study!
+    """
 
 # ================== LOGIN FUNCTION ==================
 def login():
@@ -38,7 +78,7 @@ def login():
         else:
             st.error("Invalid credentials ❌")
 
-# ================== LOGOUT FUNCTION ==================
+# ================== LOGOUT ==================
 def logout():
     st.session_state.logged_in = False
     st.rerun()
@@ -46,18 +86,15 @@ def logout():
 # ================== DASHBOARD ==================
 def dashboard():
 
-    # Sidebar user + logout
     st.sidebar.write(f"👤 {st.session_state.username}")
     st.sidebar.button("Logout", on_click=logout)
 
-    # ================== LOAD DATA ==================
+    # LOAD DATA
     df = pd.read_csv("students.csv")
-
-    # Fix data types properly
     df["marks"] = pd.to_numeric(df["marks"], errors="coerce")
     df["age"] = pd.to_numeric(df["age"], errors="coerce")
 
-    # ================== SIDEBAR ==================
+    # FILTERS
     st.sidebar.title("🔎 Filters")
 
     city = st.sidebar.selectbox(
@@ -65,12 +102,8 @@ def dashboard():
         ["All"] + list(df["city"].unique())
     )
 
-    min_marks = st.sidebar.slider(
-        "Minimum Marks",
-        0, 100, 50
-    )
+    min_marks = st.sidebar.slider("Minimum Marks", 0, 100, 50)
 
-    # Apply filters
     filtered_df = df.copy()
 
     if city != "All":
@@ -78,12 +111,11 @@ def dashboard():
 
     filtered_df = filtered_df[filtered_df["marks"] >= min_marks]
 
-    # ================== TITLE ==================
+    # TITLE
     st.title("🤖 AI Data Query Dashboard")
 
-    # ================== KPI ==================
+    # KPI
     st.markdown("## 📊 Key Insights")
-
     col1, col2, col3, col4 = st.columns(4)
 
     col1.metric("Total Students", len(filtered_df))
@@ -91,7 +123,7 @@ def dashboard():
     col3.metric("Highest Marks", filtered_df["marks"].max())
     col4.metric("Lowest Marks", filtered_df["marks"].min())
 
-    # ================== AI QUERY ==================
+    # ================== EXISTING AI QUERY ==================
     st.markdown("## 🤖 Ask AI")
 
     query = st.text_input("Ask your question (e.g. students from Pune)")
@@ -122,14 +154,22 @@ def dashboard():
             st.success("AI Response")
             st.dataframe(df_result, use_container_width=True)
 
-    # ================== TABLE ==================
+    # ================== NEW AI AGENT (TRACK 2) ==================
+    st.markdown("## 🤖 Smart AI Assistant")
+
+    student_query = st.text_input("Ask about a student (e.g. Priya)")
+
+    if student_query:
+        response = ai_agent(student_query, filtered_df)
+        st.success(response)
+
+    # TABLE
     st.markdown("## 📋 Student Data")
     st.dataframe(filtered_df, use_container_width=True)
 
-    # ================== VISUAL DASHBOARD ==================
+    # VISUALS
     st.markdown("## 📈 Visual Dashboard")
 
-    # ROW 1
     col1, col2 = st.columns(2)
 
     with col1:
@@ -140,57 +180,17 @@ def dashboard():
         st.subheader("🏙️ Students by City")
         st.bar_chart(filtered_df["city"].value_counts())
 
-    # ROW 2
     col3, col4 = st.columns(2)
 
     with col3:
         st.subheader("📊 Average Marks per City")
-        avg_marks = filtered_df.groupby("city")["marks"].mean()
-        st.bar_chart(avg_marks)
+        st.bar_chart(filtered_df.groupby("city")["marks"].mean())
 
     with col4:
         st.subheader("🔥 Top 5 Performers")
-        top_students = filtered_df.sort_values(by="marks", ascending=False).head(5)
-        st.dataframe(top_students, use_container_width=True)
+        st.dataframe(filtered_df.sort_values(by="marks", ascending=False).head(5))
 
-    # ROW 3
-    col5, col6 = st.columns(2)
-
-    with col5:
-        st.subheader("📉 Bottom 5 Performers")
-        low_students = filtered_df.sort_values(by="marks", ascending=True).head(5)
-        st.dataframe(low_students, use_container_width=True)
-
-    with col6:
-        st.subheader("📌 City-wise Count")
-        city_count = filtered_df["city"].value_counts().reset_index()
-        city_count.columns = ["City", "Count"]
-        st.dataframe(city_count, use_container_width=True)
-
-    # ROW 4
-    col7, col8 = st.columns(2)
-
-    with col7:
-        st.subheader("📊 Marks Statistics")
-        st.write(filtered_df["marks"].describe())
-
-    with col8:
-        st.subheader("🏆 Highest Scorer Details")
-        top = filtered_df.loc[filtered_df["marks"].idxmax()]
-        st.write(top)
-
-    # ROW 5
-    col9, col10 = st.columns(2)
-
-    with col9:
-        st.subheader("📍 City Comparison Chart")
-        st.bar_chart(filtered_df.groupby("city")["marks"].sum())
-
-    with col10:
-        st.subheader("📈 Marks Trend")
-        st.line_chart(filtered_df["marks"])
-
-    # ================== QUICK SEARCH ==================
+    # QUICK SEARCH
     st.markdown("## 🔍 Quick Search")
 
     name_search = st.text_input("Search student by name")
@@ -201,20 +201,18 @@ def dashboard():
         ]
         st.dataframe(result, use_container_width=True)
 
-    # ================== EXTRA ==================
+    # EXTRA
     st.markdown("## 🧠 Extra Insights")
 
     col11, col12 = st.columns(2)
 
-    with col11:
-        st.subheader("Median Marks")
-        st.write(filtered_df["marks"].median())
+    col11.subheader("Median Marks")
+    col11.write(filtered_df["marks"].median())
 
-    with col12:
-        st.subheader("Standard Deviation")
-        st.write(filtered_df["marks"].std())
+    col12.subheader("Standard Deviation")
+    col12.write(filtered_df["marks"].std())
 
-    # ================== DOWNLOAD ==================
+    # DOWNLOAD
     st.markdown("## ⬇️ Download Data")
 
     csv = filtered_df.to_csv(index=False).encode("utf-8")
