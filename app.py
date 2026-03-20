@@ -239,8 +239,23 @@ def dashboard():
     st.markdown("---")
 
     # ================= FOOTER =================
-    st.success("Project Ready for Submission ✅")
 
+st.markdown("""
+<div style="text-align:center; padding:20px; border-radius:10px; 
+background: linear-gradient(90deg,#1f4037,#99f2c8); color:black">
+
+<h3>🚀 AI Dashboard Project</h3>
+
+<p><b>Developed by Anjala</b></p>
+
+<p>📊 Data Analytics | 🤖 AI Integration | 📈 Visualization</p>
+
+<p style="font-size:13px;">Built using Streamlit • Python • OpenAI API</p>
+
+</div>
+""", unsafe_allow_html=True)
+
+st.info("💡 This dashboard provides AI-powered insights, filtering, and real-time data visualization.")
 # ================== MAIN ==================
 if not st.session_state.logged_in:
     login()
