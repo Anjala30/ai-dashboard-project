@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import requests
 import matplotlib.pyplot as plt
+from openai import OpenAI
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # ================== PAGE CONFIG ==================
 st.set_page_config(page_title="AI Dashboard", layout="wide")
@@ -137,35 +139,47 @@ def dashboard():
     col4.metric("Lowest Marks", filtered_df["marks"].min() if not filtered_df.empty else 0)
 
     # ================== ASK AI ==================
-    st.markdown("## 🤖 Ask AI")
+   # ================== GPT AI CHAT ==================
+st.markdown("## 🤖 AI Chat (Powered by GPT)")
 
-    query = st.text_input("Ask your question (e.g. students from Pune)")
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
-    if st.button("Search"):
-        if query:
+user_input = st.text_input("Ask anything about your data")
 
-            df_result = df.copy()
+if st.button("Ask AI"):
+    if user_input:
 
-            if "pune" in query.lower():
-                df_result = df_result[df_result["city"] == "Pune"]
+        data_context = filtered_df.to_string()
 
-            elif "mumbai" in query.lower():
-                df_result = df_result[df_result["city"] == "Mumbai"]
+        prompt = f"""
+        You are a smart data analyst.
 
-            elif "delhi" in query.lower():
-                df_result = df_result[df_result["city"] == "Delhi"]
+        Dataset:
+        {data_context}
 
-            elif "top" in query.lower():
-                df_result = df_result.sort_values(by="marks", ascending=False)
+        Question:
+        {user_input}
 
-            elif "lowest" in query.lower():
-                df_result = df_result.sort_values(by="marks", ascending=True)
+        Give clear and short answer.
+        """
 
-            elif "average" in query.lower():
-                st.success(f"Average Marks: {round(df['marks'].mean(), 2)}")
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}]
+            )
 
-            st.success("AI Response")
-            st.dataframe(df_result, use_container_width=True)
+            answer = response.choices[0].message.content
+
+            st.session_state.chat_history.append((user_input, answer))
+
+        except Exception as e:
+            st.error(f"Error: {e}")
+
+    for q, a in st.session_state.chat_history[::-1]:
+    st.markdown(f"**🧑 You:** {q}")
+    st.markdown(f"**🤖 AI:** {a}")
 
     # ================== SMART AI ==================
     st.markdown("## 🤖 Smart AI Assistant")
