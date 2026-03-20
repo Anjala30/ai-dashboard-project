@@ -155,7 +155,7 @@ if st.button("Ask AI"):
     if user_input:
 
         # Convert dataframe to text
-        data_context = filtered_df.to_string()
+        data_context = df.to_string()
 
         # Prompt
         prompt = f"""
