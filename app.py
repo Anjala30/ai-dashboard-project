@@ -140,29 +140,35 @@ def dashboard():
 
     # ================== ASK AI ==================
    # ================== GPT AI CHAT ==================
+# ================== GPT AI CHAT ==================
 st.markdown("## 🤖 AI Chat (Powered by GPT)")
 
+# Initialize chat history
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
+# Input
 user_input = st.text_input("Ask anything about your data")
 
+# Button
 if st.button("Ask AI"):
     if user_input:
 
+        # Convert dataframe to text
         data_context = filtered_df.to_string()
 
+        # Prompt
         prompt = f"""
-        You are a smart data analyst.
+You are a smart data analyst.
 
-        Dataset:
-        {data_context}
+Dataset:
+{data_context}
 
-        Question:
-        {user_input}
+Question:
+{user_input}
 
-        Give clear and short answer.
-        """
+Give clear and short answer.
+"""
 
         try:
             response = client.chat.completions.create(
@@ -172,15 +178,17 @@ if st.button("Ask AI"):
 
             answer = response.choices[0].message.content
 
+            # Save chat
             st.session_state.chat_history.append((user_input, answer))
 
         except Exception as e:
             st.error(f"Error: {e}")
 
-    for q, a in st.session_state.chat_history[::-1]:
+# Display chat history
+for q, a in st.session_state.chat_history[::-1]:
     st.markdown(f"**🧑 You:** {q}")
     st.markdown(f"**🤖 AI:** {a}")
-    
+
     # ================== SMART AI ==================
     st.markdown("## 🤖 Smart AI Assistant")
 
